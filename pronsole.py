@@ -19,6 +19,20 @@ except:
 def dosify(name):
     return os.path.split(name)[1].split(".")[0][:8]+".g"
 
+def totalelength(g):
+    tot=0
+    cur=0
+    for i in g:
+        if "E" in i and ("G1" in i or "G0" in i):
+            try:
+                cur=float(i.split("E")[1].split(" ")[0])
+            except:
+                pass
+        elif "G92" in i and "E0" in i:
+            tot+=cur
+    return tot
+
+
 class Settings:
     #def _temperature_alias(self): return {"pla":210,"abs":230,"off":0}
     #def _temperature_validate(self,v):
@@ -30,13 +44,14 @@ class Settings:
         # the initial value determines the type
         self.port = ""
         self.baudrate = 115200
-        self.temperature_pla = 210.0
-        self.temperature_abs = 230.0
-        self.bedtemp_pla = 60.0
-        self.bedtemp_abs = 110.0
-        self.xy_feedrate = 3000
+        self.temperature_pla = 200.0
+        self.temperature_abs = 265.0
+        self.bedtemp_pla = 95.0
+        self.bedtemp_abs = 140.0
+        self.xy_feedrate = 9000
         self.z_feedrate = 200
-        self.e_feedrate = 300
+        self.e_feedrate = 100
+        self.z_dist = 0.1
     def _set(self,key,value):
         try:
             value = getattr(self,"_%s_alias"%key)()[value]
@@ -82,8 +97,8 @@ class pronsole(cmd.Cmd):
         self.sdfiles=[]
         self.paused=False
         self.sdprinting=0
-        self.temps={"pla":"210","abs":"230","off":"0"}
-        self.bedtemps={"pla":"60","abs":"110","off":"0"}
+        self.temps={"pla":"200","abs":"265","off":"0"}
+        self.bedtemps={"pla":"95","abs":"140","off":"0"}
         self.percentdone=0
         self.tempreadings=""
         self.macros={}
@@ -819,6 +834,18 @@ class pronsole(cmd.Cmd):
         self.p.send_now("G1 "+axis+str(l[1])+" F"+str(feed))
         self.p.send_now("G90")
         
+    def do_move_abs(self,l):
+        if(len(l)<2):
+            print "No move specified."
+            return
+        if self.p.printing:
+            print "Printer is currently printing. Please pause the print before you issue manual commands."
+            return
+        if not self.p.online:
+            print "Printer is not online. Unable to move."
+            return
+        self.p.send_now(l)
+
     def help_move(self):
         print "Move an axis. Specify the name of the axis and the amount. "
         print "move X 10 will move the X axis forward by 10mm at ",self.settings.xy_feedrate,"mm/min (default XY speed)"
@@ -869,9 +896,9 @@ class pronsole(cmd.Cmd):
             print "Reversing %fmm of filament."%(-1*length,)
         else:
             "Length is 0, not doing anything."
-        self.p.send_now("G91")
+        #self.p.send_now("G91")
         self.p.send_now("G1 E"+str(length)+" F"+str(feed))
-        self.p.send_now("G90")
+        #self.p.send_now("G90")
         
     def help_extrude(self):
         print "Extrudes a length of filament, 5mm by default, or the number of mm given as a parameter"

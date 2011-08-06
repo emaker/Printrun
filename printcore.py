@@ -235,7 +235,7 @@ class printcore():
             
     def _send(self, command, lineno=0, calcchecksum=False):
         if(calcchecksum):
-            prefix="N"+str(lineno)+" "+command
+            prefix="N"+str(lineno)+" "+command+" "
             command=prefix+"*"+str(self._checksum(prefix))
             if("M110" not in command):
                 self.sentlines[lineno]=command

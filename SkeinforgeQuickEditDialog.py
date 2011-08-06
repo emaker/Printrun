@@ -26,7 +26,7 @@ class SkeinforgeQuickEditDialog(wx.Dialog):
         """
         self.moduleSettingsMap = {
                                 'dimension':['Filament Diameter (mm):','Retraction Distance (millimeters):', 'Retraction Distance (millimeters):','Extruder Retraction Speed (mm/s):'],
-                                'carve':['Layer Height = Extrusion Thickness (mm):', 'Extrusion Width (mm):'],
+                                'carve':['Layer Thickness (mm):', 'Perimeter Width over Thickness (ratio):'],
                                 'chamber':['Heated PrintBed Temperature (Celcius):', 'Turn print Bed Heater Off at Shut Down', 'Turn Extruder Heater Off at Shut Down'],
                                 'cool':['Activate Cool.. but use with a fan!', 'Use Cool if layer takes shorter than(seconds):'],
                                 'fill':['Activate Fill:', 'Infill Solidity (ratio):', 'Fully filled Layers (each top and bottom):', 'Extra Shells on Sparse Layer (layers):', 'Extra Shells on Alternating Solid Layer (layers):'],

@@ -1,7 +1,7 @@
 import wx,time
 
 class window(wx.Frame):
-    def __init__(self,f,size=(600,600),bedsize=(200,200)):
+    def __init__(self,f,size=(600,600),bedsize=(140,140)):
         wx.Frame.__init__(self,None,title="Layer view (Use shift+mousewheel to switch layers)",size=(size[0],size[1]))
         self.p=gviz(self,size=size,bedsize=bedsize)
         s=time.time()
@@ -44,16 +44,16 @@ class window(wx.Frame):
     
         #print p.lines.keys()
     def zoom(self, event):
-        z=event.GetWheelRotation()
-        if event.ShiftDown():
-            if z > 0:   self.p.layerdown()
-            elif z < 0: self.p.layerup()
-        else:
-            if z > 0:   self.p.zoom(event.GetX(),event.GetY(),1.2)
-            elif z < 0: self.p.zoom(event.GetX(),event.GetY(),1/1.2)
+    	z=event.GetWheelRotation()
+    	if event.ShiftDown():
+    		if z > 0:   self.p.layerdown()
+    		elif z < 0: self.p.layerup()
+    	else:
+    		if z > 0:   self.p.zoom(event.GetX(),event.GetY(),1.2)
+    		elif z < 0: self.p.zoom(event.GetX(),event.GetY(),1/1.2)
         
 class gviz(wx.Panel):
-    def __init__(self,parent,size=(200,200),bedsize=(200,200)):
+    def __init__(self,parent,size=(200,200),bedsize=(140,140)):
         wx.Panel.__init__(self,parent,-1,size=(size[0],size[1]))
         self.size=size
         self.bedsize=bedsize
@@ -176,7 +176,8 @@ class gviz(wx.Panel):
     def addgcode(self,gcode="M105",hilight=0):
         gcode=gcode.split("*")[0]
         gcode=gcode.split(";")[0]
-        if "g1" in gcode.lower():
+        firstchar = gcode.lower()[:1]
+        if firstchar == 'x' or  firstchar == 'y' or firstchar == 'z' or firstchar == 'e' or "g1" in gcode.lower():
             gcode=gcode.lower().split()
             target=self.lastpos[:]
             if hilight:
@@ -209,8 +210,7 @@ class gviz(wx.Panel):
             
 if __name__ == '__main__':
     app = wx.App(False)
-    #main = window(open("/home/kliment/designs/spinner/arm_export.gcode"))
-    main = window(open("jam.gcode"))
+    main = window()
     main.Show()
     app.MainLoop()
 
