@@ -28,8 +28,9 @@ def totalelength(g):
                 cur=float(i.split("E")[1].split(" ")[0])
             except:
                 pass
-        elif "G92" in i and "E0" in i:
+            #end try
             tot+=cur
+        #end if
     return tot
 
 
