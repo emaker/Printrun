@@ -99,7 +99,6 @@ class PronterWindow(wx.Frame,pronsole.pronsole):
         self.t=Tee(self.catchprint)
         self.stdout=sys.stdout
         self.mini=False
-        self.zdist="0.1"        
         self.p.sendcb=self.sentcb
 #        self.p.startcb=self.startcb
 #        self.starttime=0
@@ -603,10 +602,11 @@ class PronterWindow(wx.Frame,pronsole.pronsole):
        self.settings._set("z_dist",radioSelected.GetLabel())
 
     def do_zneg(self,e):
-        self.onecmd("move Z -" + self.zdist)
+        self.onecmd("move Z -" + str(self.settings.z_dist))
+        #print "move %" + self.zdist
 
     def do_zpos(self,e):
-        self.onecmd("move Z " + self.zdist)
+        self.onecmd("move Z " + str(self.settings.z_dist))
         
     def setfeeds(self,e):
         self.feedrates_changed = True
