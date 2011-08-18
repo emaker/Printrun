@@ -25,14 +25,15 @@ class SkeinforgeQuickEditDialog(wx.Dialog):
                    Perhaps this can be solved, but at the moment this dialog cannot modify radio button values.  One will have to use the main Skeinforge application.  
         """
         self.moduleSettingsMap = {
-                                'dimension':['Filament Diameter (mm):','Retraction Distance (millimeters):', 'Retraction Distance (millimeters):','Extruder Retraction Speed (mm/s):'],
+                                'dimension':['Filament Diameter (mm):','Filament Packing Density (ratio):', 'Retraction Distance (millimeters):','Extruder Retraction Speed (mm/s):'],
+                                'oozestep':['First layer feed (mm/s):','First layer path press dist (mm):','Next path press XY (mm):','Extruder early stop XY (mm):'],
                                 'carve':['Layer Thickness (mm):', 'Perimeter Width over Thickness (ratio):'],
-                                'chamber':['Heated PrintBed Temperature (Celcius):', 'Turn print Bed Heater Off at Shut Down', 'Turn Extruder Heater Off at Shut Down'],
-                                'cool':['Activate Cool.. but use with a fan!', 'Use Cool if layer takes shorter than(seconds):'],
-                                'fill':['Activate Fill:', 'Infill Solidity (ratio):', 'Fully filled Layers (each top and bottom):', 'Extra Shells on Sparse Layer (layers):', 'Extra Shells on Alternating Solid Layer (layers):'],
+                                #'chamber':['Heated PrintBed Temperature (Celcius):', 'Turn print Bed Heater Off at Shut Down', 'Turn Extruder Heater Off at Shut Down'],
+                                #'cool':['Activate Cool.. but use with a fan!', 'Use Cool if layer takes shorter than(seconds):'],
+                                'fill':['Activate Fill:', 'Infill Solidity (ratio):', 'Solid Surface Thickness (layers):', 'Extra Shells on Base (layers):', 'Extra Shells on Sparse Layer (layers):', 'Extra Shells on Alternating Solid Layer (layers):'],
                                 'multiply':['Number of Columns (integer):', 'Number of Rows (integer):'],
-                                'raft':['First Layer Main Feedrate (mm/s):','First Layer Perimeter Feedrate (mm/s):','First Layer Flow Rate Infill(scaler):','First Layer Flow Rate Perimeter(scaler):',],
-                                'speed':['Main Feed Rate (mm/s):','Main Flow Rate  (scaler):','Perimeter Feed Rate (mm/s):','Perimeter Flow Rate (scaler):','Travel Feed Rate (mm/s):']
+                                'raft':['Activate Raft'],
+                                'speed':['Feed Rate (mm/s):','Flow Rate Setting (float):','Perimeter Feed Rate (mm/s):','Perimeter Flow Rate (scaler):','Travel Feed Rate (mm/s):']
                                }
         
         self.scrollbarPanel = wx.ScrolledWindow(self, -1, style=wx.TAB_TRAVERSAL)

@@ -408,6 +408,10 @@ class RaftRepository:
 		self.supportCrossHatch = settings.BooleanSetting().getFromValue('Support Cross Hatch', self, False)
 		self.supportFlowRateOverOperatingFlowRate = settings.FloatSpin().getFromValue(
 			0.7, 'Support Flow Rate over Operating Flow Rate (ratio):', self, 1.1, 1.0)
+		self.supportFirstLayerFeedRateMultiplier = settings.FloatSpin().getFromValue(
+			0.7, 'Support first layer Feed Rate (ratio):', self, 1.1, 1.0)
+		self.supportFirstLayerFlowRateMultiplier = settings.FloatSpin().getFromValue(
+			0.7, 'Support first layer Flow Rate (ratio):', self, 1.1, 1.0)
 		self.supportGapOverPerimeterExtrusionWidth = settings.FloatSpin().getFromValue(
 			0.5, 'Support Gap over Perimeter Extrusion Width (ratio):', self, 1.5, 1.0)
 		self.supportMaterialChoice = settings.MenuButtonDisplay().getFromName('Support Material Choice: ', self)
@@ -745,8 +749,10 @@ class RaftSkein:
 		feedRateMinuteMultiplied = self.feedRateMinute
 		supportFlowRateMultiplied = self.supportFlowRate
 		if self.layerIndex == 0:
-			feedRateMinuteMultiplied *= self.repository.objectFirstLayerFeedRateInfillMultiplier.value
-			supportFlowRateMultiplied *= self.repository.objectFirstLayerFlowRateInfillMultiplier.value
+			#feedRateMinuteMultiplied *= self.repository.objectFirstLayerFeedRateInfillMultiplier.value
+			#supportFlowRateMultiplied *= self.repository.objectFirstLayerFlowRateInfillMultiplier.value
+			feedRateMinuteMultiplied *= self.repository.supportFirstLayerFeedRateMultiplier.value
+			supportFlowRateMultiplied *= self.repository.supportFirstLayerFlowRateMultiplier.value
 		self.addFlowRateValueIfDifferent(supportFlowRateMultiplied)
 		for path in paths:
 			self.distanceFeedRate.addGcodeFromFeedRateThreadZ(feedRateMinuteMultiplied, path, self.travelFeedRateMinute, z)

@@ -98,8 +98,8 @@ class pronsole(cmd.Cmd):
         self.sdfiles=[]
         self.paused=False
         self.sdprinting=0
-        self.temps={"pla":"200","abs":"265","off":"0"}
-        self.bedtemps={"pla":"95","abs":"140","off":"0"}
+        self.temps={"clean":"78","pla":"200","abs":"265","off":"0"}
+        self.bedtemps={"warm":"45","pla":"95","abs":"140","off":"0"}
         self.percentdone=0
         self.tempreadings=""
         self.macros={}
@@ -393,10 +393,10 @@ class pronsole(cmd.Cmd):
                 os.rename(rci.name,rci.name+"~old")
             rco.close()
             os.rename(rco.name,self.rc_filename)
-            if definition != "":
-                print "Saved '"+key+"' to '"+self.rc_filename+"'"
-            else:
-                print "Removed '"+key+"' from '"+self.rc_filename+"'"
+            #if definition != "":
+            #    print "Saved '"+key+"' to '"+self.rc_filename+"'"
+            #else:
+            #    print "Removed '"+key+"' from '"+self.rc_filename+"'"
         except Exception, e:
             print "Saving failed for",key+":",str(e)
         finally:
