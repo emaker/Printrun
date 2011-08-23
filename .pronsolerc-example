@@ -1,0 +1,29 @@
+# Sample .pronsolerc file - copy this into your home directory and rename to .pronsolerc
+macro up G1 Z6 F200
+macro printnow !self.p.send_now("M23 [0]")
+macro printme
+	G21
+	G90
+	move z 6
+	home
+	move z 6
+	M109 {0}
+	
+macro loud !self.p.loud = 1
+macro quiet !self.p.loud = 0
+
+set last_file_path /home/jeanmarc/Documents/Models/eMAKER-Huxley/stl
+set xy_feedrate 12000
+set z_feedrate 200
+set e_feedrate 200
+set z_dist 10.000000
+set port /dev/ttyUSB0
+set last_bed_temperature 0.0
+button 0 "INIT SD" /c "#C8C8C8" M21
+button 1 "EJECT" /c "#C8C8C8" M22
+button 2 "LIST" /c "#C8C8C8" M20
+button 3 "GET TEMP" /c "#C8C8C8" M105
+button 4 "GET POS" /c "#C8C8C8" M114
+button 5 "ECHO" /c "#C8C8C8" loud
+button 6 "QUIET" /c "#C8C8C8" quiet
+button 7 "FAN ON" /c "#C8C8C8" M106 S255
