@@ -26,4 +26,4 @@ button 3 "GET TEMP" /c "#C8C8C8" M105
 button 4 "GET POS" /c "#C8C8C8" M114
 button 5 "ECHO" /c "#C8C8C8" loud
 button 6 "QUIET" /c "#C8C8C8" quiet
-button 7 "FAN ON" /c "#C8C8C8" M106 S255
+
