@@ -13,6 +13,6 @@ binary_16_byte	False
 gcode_step	False
 gcode_time_segment	False
 gcode_small	True
-File Extension:	gcode
+File Extension:	abs
 Name of Replace File:	replace.csv
 Save Penultimate Gcode	False
