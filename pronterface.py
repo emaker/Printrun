@@ -252,25 +252,48 @@ class PronterWindow(wx.Frame,pronsole.pronsole):
         
     def popmenu(self):
         self.menustrip = wx.MenuBar()
+        #File menu
         m = wx.Menu()
         self.Bind(wx.EVT_MENU, self.loadfile, m.Append(-1,_("&Open..."),_(" Opens file")))
         self.Bind(wx.EVT_MENU, self.do_editgcode, m.Append(-1,_("&Edit..."),_(" Edit open file")))
-        if sys.platform != 'darwin':
-            self.Bind(wx.EVT_MENU, lambda x:threading.Thread(target=lambda :self.do_skein("set")).start(), m.Append(-1,_("SFACT Settings"),_(" Adjust SFACT settings")))
-        try:
-            from SkeinforgeQuickEditDialog import SkeinforgeQuickEditDialog
-            self.Bind(wx.EVT_MENU, lambda *e:SkeinforgeQuickEditDialog(self), m.Append(-1,_("SFACT Quick Settings"),_(" Quickly adjust SFACT settings for active profile")))
-        except:
-            pass
-
         self.Bind(wx.EVT_MENU, self.OnExit, m.Append(wx.ID_EXIT,_("E&xit"),_(" Closes the Window")))
-        self.menustrip.Append(m,_("&Print"))
+        self.menustrip.Append(m,_("&File"))
+        #macros menu
         m = wx.Menu()
         self.macros_menu = wx.Menu()
         m.AppendSubMenu(self.macros_menu, _("&Macros"))
         self.Bind(wx.EVT_MENU, self.new_macro, self.macros_menu.Append(-1, _("<&New...>")))
+        #options
         self.Bind(wx.EVT_MENU, lambda *e:options(self), m.Append(-1,_("&Options"),_(" Options dialog")))
         self.menustrip.Append(m,_("&Settings"))
+        #skeinforge
+        if sys.platform != 'darwin':
+            self.skeinforge_menu = wx.Menu()
+            self.Bind(wx.EVT_MENU, lambda x:threading.Thread(target=lambda :self.do_skein("set")).start(), self.skeinforge_menu.Append(-1, "Open Skeinforge", " Adjust skeinforge settings"))
+            try:
+                from SkeinforgeQuickEditDialog import SkeinforgeQuickEditDialog
+                self.Bind(wx.EVT_MENU, lambda * e:SkeinforgeQuickEditDialog(self), self.skeinforge_menu.Append(-1, "Quick Edit", " Quickly adjust skeinforge settings for active profile"))
+            except:
+                pass
+            try:
+                from SkeinforgeProfileChanger import SkeinforgeProfileChanger
+                profileNamesList = SkeinforgeProfileChanger().getProfileNames()
+                activeProfileName = SkeinforgeProfileChanger().getActiveProfileName()
+                print "Skeinforge Profile is " + activeProfileName
+                self.skeinforge_profiles_menu = wx.Menu()
+                self.skeinforge_menu.AppendSubMenu(self.skeinforge_profiles_menu, "Profiles")
+                for profileName in profileNamesList:
+                    profileMenuItem = self.skeinforge_profiles_menu.AppendRadioItem(-1, profileName)
+                    if (profileName == activeProfileName):
+                        profileMenuItem.Check()
+                    self.Bind(wx.EVT_MENU, lambda x, p=profileName:SkeinforgeProfileChanger().setActiveProfileName(p), profileMenuItem)
+            except:
+                traceback.print_exc(file=sys.stdout)
+                pass
+
+            #m.AppendSubMenu(self.skeinforge_menu, "Skeinforge")
+            self.menustrip.Append(self.skeinforge_menu,_("S&keinforge"))
+
         self.update_macros_menu()
         self.SetMenuBar(self.menustrip)
     
@@ -1022,7 +1045,8 @@ class PronterWindow(wx.Frame,pronsole.pronsole):
             time.sleep(0.1)
         fn=self.filename
         try:
-            self.filename=self.filename.replace(".stl","_export.gcode").replace(".STL","_export.gcode")
+            #self.filename=self.filename.replace(".stl","_export.gcode").replace(".STL","_export.gcode")
+            self.filename=self.filename.replace(".stl",".pla").replace(".STL",".pla")
             of=open(self.filename)
             self.f=[i.replace("\n","").replace("\r","") for i in of]
             of.close

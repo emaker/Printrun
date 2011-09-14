@@ -4,8 +4,11 @@ from skeinforge.fabmetheus_utilities import archive
 from skeinforge.fabmetheus_utilities import settings
 from skeinforge.skeinforge_application.skeinforge_utilities import skeinforge_craft
 from skeinforge.skeinforge_application.skeinforge_utilities import skeinforge_profile
+from skeinforge.skeinforge_application.skeinforge_plugins.profile_plugins import extrusion
 import os
 import wx
+import fileinput
+import sys
 
 class SkeinforgeQuickEditDialog(wx.Dialog):
     '''Shows a consise list of important settings from the active Skeinforge profile.'''
@@ -55,6 +58,7 @@ class SkeinforgeQuickEditDialog(wx.Dialog):
             self.SetSize(wx.DLG_SZE(self, (465, 325)))
             
         self.SetPosition((0, 0))
+        self.CenterOnParent()
         self.scrollbarPanel.SetScrollRate(10, 10)
         
     def __do_layout(self):
@@ -68,7 +72,7 @@ class SkeinforgeQuickEditDialog(wx.Dialog):
         self.Layout()
                 
     def getProfileSettings(self):
-        settingsSizer = wx.GridBagSizer(hgap=2, vgap=1)
+        settingsSizer = wx.GridBagSizer(hgap=2, vgap=2)
         settingsRow = 0
         
         for craftName in sorted(self.moduleSettingsMap.keys()):
@@ -124,17 +128,23 @@ class SkeinforgeQuickEditDialog(wx.Dialog):
                 settingName = name[2]
                 pluginModule = archive.getModuleWithPath(os.path.join(skeinforge_craft.getPluginsDirectoryPath(), craftName))
                 repo = pluginModule.getNewRepository()
-                isDirty = False
+
                 for setting in settings.getReadRepository(repo).preferences:
                     if setting.name == settingName:
                         if setting.value == None or str(x.GetValue()) != str(setting.value):
-                            print('Saving ... ' + settingName + ' = ' + str(x.GetValue()))
-                            setting.value = x.GetValue()
-                            isDirty = True
-                if isDirty:
-                    settings.saveRepository(repo)
+                            self.saveSetting(repo, settingName, setting.value, x.GetValue())
         print("Skeinforge settings have been saved.")
         self.Destroy()
+
+    def saveSetting(self, repo, name, oldValue, newValue):
+        repoSettingsFilename = os.path.join(archive.getProfilesPath() , settings.getProfileBaseName(repo))
+        if (type(oldValue).__name__ == 'float'):
+            newValue = '{0:g}'.format(float(newValue))
+        for line in fileinput.FileInput(repoSettingsFilename, inplace=1):
+            if line.startswith(name + "\t"):
+                line = "{0}\t{1}\n".format(name, str(newValue))
+            sys.stdout.write(line)
+        print('Saved: ' + name + ' = ' + str(newValue) + ' (was: ' + str(oldValue) + ')')
 
 class SkeinforgeQuickEditApp(wx.App):
     def OnInit(self):
