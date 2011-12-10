@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 from serial import Serial
 from threading import Thread
+from select import error as SelectError
 import time
 import sys
 
@@ -76,7 +77,15 @@ class printcore():
         while(True):
             if(not self.printer or not self.printer.isOpen):
                 break
-            line=self.printer.readline()
+            try:
+                line=self.printer.readline()
+            except SelectError, e:
+                if 'Bad file descriptor' in e.args[1]:
+                    print "Can't read from printer (disconnected?)."
+                    break
+                else:
+                    raise
+
             if(len(line)>1):
                 self.log+=[line]
                 if self.recvcb is not None:
@@ -114,8 +123,12 @@ class printcore():
                         pass
                 #callback for errors
                 pass
-            if "resend" in line.lower() or "rs" in line:
-                toresend=int(line.replace("N:"," ").replace("N"," ").replace(":"," ").split()[-1])
+            if line.lower().startswith("resend") or line.startswith("rs"):
+                try:
+                    toresend=int(line.replace("N:"," ").replace("N"," ").replace(":"," ").split()[-1])
+                except:
+                    if line.startswith("rs"):
+                        toresend=int(line.split()[1])
                 self.resendfrom=toresend
                 self.clear=True
         self.clear=True
@@ -191,6 +204,8 @@ class printcore():
                 pass
         while(self.printing and self.printer and self.online):
             self._sendnext()
+        self.log=[]
+        self.sent=[]
         if self.endcb is not None:
             try:
                 self.endcb()
@@ -211,6 +226,7 @@ class printcore():
             self._send(self.sentlines[self.resendfrom],self.resendfrom,False)
             self.resendfrom+=1
             return
+        self.sentlines={}
         self.resendfrom=-1
         for i in self.priqueue[:]:
             self._send(i)
@@ -248,7 +264,7 @@ class printcore():
                     self.sendcb(command)
                 except:
                     pass
-            self.printer.write(command+"\n")
+            self.printer.write(str(command+"\n"))
 
 if __name__ == '__main__':
     #print "Usage: python printcore.py filename.gcode"

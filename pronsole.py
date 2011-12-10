@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 import cmd, printcore, sys 
 import glob, os, time
+import sys, subprocess 
+from math import sqrt
 if os.name=="nt":
     try:
         import _winreg
@@ -19,6 +21,124 @@ except:
 def dosify(name):
     return os.path.split(name)[1].split(".")[0][:8]+".g"
 
+def measurements(g):
+	Xcur=0.0
+	Ycur=0.0
+	Zcur=0.0
+	Xmin=1000000
+	Ymin=1000000
+	Zmin=1000000
+	Xmax=-1000000
+	Ymax=-1000000
+	Zmax=-1000000
+	Xtot=0
+	Ytot=0
+	Ztot=0
+	
+	
+	for i in g:
+		if "X" in i and ("G1" in i or "G0" in i):
+			try:
+				Xcur = float(i.split("X")[1].split(" ")[0])
+				if Xcur<Xmin and Xcur>5.0: Xmin=Xcur
+				if Xcur>Xmax: Xmax=Xcur
+			except:
+				pass
+		if "Y" in i and ("G1" in i or "G0" in i):
+			try:
+				Ycur = float(i.split("Y")[1].split(" ")[0])
+				if Ycur<Ymin and Ycur>5.0: Ymin=Ycur
+				if Ycur>Ymax: Ymax=Ycur
+			except:
+				pass
+				
+		if "Z" in i and ("G1" in i or "G0" in i):
+			try:
+				Zcur = float(i.split("Z")[1].split(" ")[0])
+				if Zcur<Zmin: Zmin=Zcur
+				if Zcur>Zmax: Zmax=Zcur
+			except:
+				pass
+				
+		
+		Xtot = Xmax - Xmin
+		Ytot = Ymax - Ymin
+		Ztot = Zmax - Zmin		
+		
+            
+	return (Xtot,Ytot,Ztot,Xmin,Xmax,Ymin,Ymax,Zmin,Zmax)
+
+def totalelength(g):
+    tot=0
+    cur=0
+    for i in g:
+        if "E" in i and ("G1" in i or "G0" in i):
+            try:
+                cur=float(i.split("E")[1].split(" ")[0])
+            except:
+                pass
+        elif "G92" in i and "E0" in i:
+            tot+=cur
+    return tot
+
+def get_coordinate_value(axis, parts):
+    for i in parts:
+        if (axis in i):
+            return float(i[1:])
+    return None
+	
+	
+def estimate_duration(g):
+    extra_cost_per_movement = 0.02
+    total_duration = 0.0
+    feedrate = 0.0
+    avg_feedrate = 0.0
+    last_feedrate = 0.0
+    X_last_position = 0.0
+    Y_last_position = 0.0
+    Z_last_position = 0.0
+    for i in g:
+        i=i.split(";")[0]
+        if "G1" in i and ("X" in i or "Y" in i or "F" in i or "E" in i):
+        #if "G1" in i and ("X" in i or "Y" in i or "Z" in i or "F" in i or "E" in i):
+            parts = i.split(" ")
+            X = get_coordinate_value("X", parts[1:])
+            Y = get_coordinate_value("Y", parts[1:])
+            #Z = get_coordinate_value("Z", parts[1:])
+            F = get_coordinate_value("F", parts[1:])
+            E = get_coordinate_value("E", parts[1:])
+
+            if (F is not None):
+                feedrate = (last_feedrate + (F / 60.0))/2.0
+            distance = 0
+            if (X is None and Y is None and E is not None):
+                distance = abs(E)
+            elif (X is not None and Y is None):
+                distance = X - X_last_position
+                X_last_position = X
+            elif (X is None and Y is not None):
+                distance = Y - Y_last_position
+                Y_last_position = Y
+            elif (X is not None and Y is not None):
+                X_distance = X - X_last_position
+                Y_distance = Y - Y_last_position
+                distance = sqrt(X_distance * X_distance + Y_distance * Y_distance)
+                X_last_position = X
+                Y_last_position = Y
+            #if (Z is not None):
+            #    Z_distance = Z - Z_last_position
+            #    if not(distance == 0.0):
+            #        distance = sqrt(Z_distance * Z_distance + distance * distance )
+            #    else:
+            #        distance = Z_distance
+            #    Z_last_position = Z
+
+            if (feedrate == 0.0 or distance == 0.0): continue
+            
+            time_for_move = distance / feedrate 
+            total_duration += time_for_move + extra_cost_per_movement
+            if (F is not None):                feedrate = F / 60.0
+    return time.strftime('%H:%M:%S', time.gmtime(total_duration/60.0))
 class Settings:
     #def _temperature_alias(self): return {"pla":210,"abs":230,"off":0}
     #def _temperature_validate(self,v):
@@ -30,13 +150,16 @@ class Settings:
         # the initial value determines the type
         self.port = ""
         self.baudrate = 115200
-        self.temperature_pla = 210.0
-        self.temperature_abs = 230.0
-        self.bedtemp_pla = 60.0
-        self.bedtemp_abs = 110.0
+        self.temperature_pla = 185
+        self.temperature_abs = 237
+        self.bedtemp_pla = 80
+        self.bedtemp_abs = 120
         self.xy_feedrate = 3000
         self.z_feedrate = 200
         self.e_feedrate = 300
+        self.slicecommand="python skeinforge/skeinforge_application/skeinforge_utilities/skeinforge_craft.py $s"
+        self.sliceoptscommand="python skeinforge/skeinforge_application/skeinforge.py"
+        
     def _set(self,key,value):
         try:
             value = getattr(self,"_%s_alias"%key)()[value]
@@ -82,8 +205,8 @@ class pronsole(cmd.Cmd):
         self.sdfiles=[]
         self.paused=False
         self.sdprinting=0
-        self.temps={"pla":"210","abs":"230","off":"0"}
-        self.bedtemps={"pla":"60","abs":"110","off":"0"}
+        self.temps={"pla":"185","abs":"237","off":"0"}
+        self.bedtemps={"pla":"80","abs":"120","off":"0"}
         self.percentdone=0
         self.tempreadings=""
         self.macros={}
@@ -153,11 +276,6 @@ class pronsole(cmd.Cmd):
             self.end_macro()
             # pass the unprocessed line to regular command processor to not require empty line in .pronsolerc
             return self.onecmd(l)
-        if ls.startswith('#'): return
-        if ls.startswith('!'):
-            self.cur_macro += ws + ls[1:] + "\n" # python mode
-        else:
-            self.cur_macro += ws + 'self.onecmd("'+ls+'".format(*arg))\n' # parametric command mode
         self.cur_macro_def += l + "\n"
     
     def end_macro(self):    
@@ -165,7 +283,7 @@ class pronsole(cmd.Cmd):
         self.prompt="PC>"
         if self.cur_macro_def!="":
             self.macros[self.cur_macro_name] = self.cur_macro_def
-            exec self.cur_macro
+            macro = self.compile_macro(self.cur_macro_name,self.cur_macro_def)
             setattr(self.__class__,"do_"+self.cur_macro_name,lambda self,largs,macro=macro:macro(self,*largs.split()))
             setattr(self.__class__,"help_"+self.cur_macro_name,lambda self,macro_name=self.cur_macro_name: self.subhelp_macro(macro_name))
             if not self.processing_rc:
@@ -182,26 +300,49 @@ class pronsole(cmd.Cmd):
                     self.save_in_rc(macro_key,macro_def)
         else:
             print "Empty macro - cancelled"
-        del self.cur_macro,self.cur_macro_name,self.cur_macro_def
+        del self.cur_macro_name,self.cur_macro_def
+    
+    def compile_macro_line(self,line):
+        line = line.rstrip()
+        ls = line.lstrip()
+        ws = line[:len(line)-len(ls)] # just leading whitespace
+        if ls=="" or ls.startswith('#'): return "" # no code
+        if ls.startswith('!'):
+            return ws + ls[1:] + "\n" # python mode
+        else:
+            return ws + 'self.onecmd("'+ls+'".format(*arg))\n' # parametric command mode
+    
+    def compile_macro(self,macro_name,macro_def):
+        if macro_def.strip() == "":
+            print "Empty macro - cancelled"
+            return
+        pycode = "def macro(self,*arg):\n"
+        if "\n" not in macro_def.strip():
+            pycode += self.compile_macro_line("  "+macro_def.strip())
+        else:
+            lines = macro_def.split("\n")
+            for l in lines:
+                pycode += self.compile_macro_line(l)
+        exec pycode
+        return macro
         
     def start_macro(self,macro_name,prev_definition="",suppress_instructions=False):
         if not self.processing_rc and not suppress_instructions:
             print "Enter macro using indented lines, end with empty line"
         self.cur_macro_name = macro_name
         self.cur_macro_def = ""
-        self.cur_macro = "def macro(self,*arg):\n"
         self.onecmd = self.hook_macro # override onecmd temporarily
         self.prompt="..>"
         
     def delete_macro(self,macro_name):
-        if macro_name in self.macros.keys():
-            delattr(self.__class__,"do_"+macro_name)
-            del self.macros[macro_name]
-            print "Macro '"+macro_name+"' removed"
-            if not self.processing_rc and not self.processing_args:
-                self.save_in_rc("macro "+macro_name,"")
-        else:
-            print "Macro '"+macro_name+"' is not defined"
+                if macro_name in self.macros.keys():
+                    delattr(self.__class__,"do_"+macro_name)
+                    del self.macros[macro_name]
+                    print "Macro '"+macro_name+"' removed"
+                    if not self.processing_rc and not self.processing_args:
+                        self.save_in_rc("macro "+macro_name,"")
+                else:
+                    print "Macro '"+macro_name+"' is not defined"
     def do_macro(self,args):
         if args.strip()=="":
             self.print_topics("User-defined macros",self.macros.keys(),15,80)
@@ -221,10 +362,6 @@ class pronsole(cmd.Cmd):
                 return
             self.cur_macro_def = macro_def
             self.cur_macro_name = macro_name
-            if macro_def.startswith("!"):
-                self.cur_macro = "def macro(self,*arg):\n  "+macro_def[1:]+"\n"
-            else:
-                self.cur_macro = "def macro(self,*arg):\n  self.onecmd('"+macro_def+"'.format(*arg))\n"
             self.end_macro()
             return
         if self.macros.has_key(macro_name):
@@ -304,7 +441,7 @@ class pronsole(cmd.Cmd):
                 if not rc_cmd.lstrip().startswith("#"):
                     self.onecmd(rc_cmd)
             rc.close()
-            if hasattr(self,"cur_macro"):
+            if hasattr(self,"cur_macro_def"):
                 self.end_macro()
             self.rc_loaded = True
         finally:
@@ -363,7 +500,10 @@ class pronsole(cmd.Cmd):
                 os.rename(rci.name,rci.name+"~old")
             rco.close()
             os.rename(rco.name,self.rc_filename)
-            print "Saved '"+key+"' to '"+self.rc_filename+"'"
+            #if definition != "":
+            #    print "Saved '"+key+"' to '"+self.rc_filename+"'"
+            #else:
+            #    print "Removed '"+key+"' from '"+self.rc_filename+"'"
         except Exception, e:
             print "Saving failed for",key+":",str(e)
         finally:
@@ -676,14 +816,14 @@ class pronsole(cmd.Cmd):
         print "! os.listdir('.')"
         
     def default(self,l):
-        if(l[0]=='M' or l[0]=="G"):
+        if(l[0]=='M' or l[0]=="G" or l[0]=='T'):
             if(self.p and self.p.online):
                 print "SENDING:"+l
                 self.p.send_now(l)
             else:
                 print "Printer is not online."
             return
-        if(l[0]=='m' or l[0]=="g"):
+        if(l[0]=='m' or l[0]=="g" or l[0]=='t'):
             if(self.p and self.p.online):
                 print "SENDING:"+l.upper()
                 self.p.send_now(l.upper())
@@ -937,6 +1077,9 @@ class pronsole(cmd.Cmd):
         print "monitor - Reports temperature and SD print status (if SD printing) every 5 seconds"
         print "monitor 2 - Reports temperature and SD print status (if SD printing) every 2 seconds"
         
+    def expandcommand(self,c):
+        return c.replace("$python",sys.executable)
+        
     def do_skein(self,l):
         l=l.split()
         if len(l)==0:
@@ -950,29 +1093,20 @@ class pronsole(cmd.Cmd):
             if not(os.path.exists(l[0])):
                 print "File not found!"
                 return
-        if not os.path.exists("skeinforge"):
-            print "Skeinforge not found. \nPlease copy Skeinforge into a directory named \"skeinforge\" in the same directory as this file."
-            return
-        if not os.path.exists("skeinforge/__init__.py"):
-            f=open("skeinforge/__init__.py","w")
-            f.close()
         try:
-            from skeinforge.skeinforge_application.skeinforge_utilities import skeinforge_craft
-            from skeinforge.skeinforge_application import skeinforge
+            import shlex
             if(settings):
-                skeinforge.main()
+                param = self.expandcommand(self.settings.sliceoptscommand).encode()
+                print "Entering skeinforge settings: ",param
+                subprocess.call(shlex.split(param))
             else:
-                if(len(l)>1):
-                    if(l[1] == "view"):
-                        skeinforge_craft.writeOutput(l[0],True)
-                    else:
-                        skeinforge_craft.writeOutput(l[0],False)
-                else:
-                    skeinforge_craft.writeOutput(l[0],False)
+                param = self.expandcommand(self.settings.slicecommand).replace("$s",l[0]).replace("$o",l[0].replace(".stl","_export.gcode").replace(".STL","_export.gcode")).encode()
+                print "Slicing: ",param
+                subprocess.call(shlex.split(param))
                 print "Loading skeined file."
                 self.do_load(l[0].replace(".stl","_export.gcode"))
-        except:
-            print "Skeinforge execution failed."
+        except Exception,e:
+            print "Skeinforge execution failed: ",e
         
     def complete_skein(self, text, line, begidx, endidx):
         s=line.split()
